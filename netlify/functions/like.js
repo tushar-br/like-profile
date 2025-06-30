@@ -30,14 +30,25 @@ exports.handler = async (event) => {
   const ip = event.headers['x-forwarded-for']?.split(',')[0] || event.headers['client-ip'] || 'unknown';
   let comments = await getComments();
 
+  // Helper to mark ownership and format date for frontend
+  function mapComment(c) {
+    return {
+      id: c.id,
+      text: c.text,
+      date: c.created || Date.now(),
+      isOwner: c.ip === ip
+    };
+  }
+
   if (event.httpMethod === 'GET') {
     const res = await fetch(`${UPSTASH_REDIS_REST_URL}/get/${COUNT_KEY}`, {
       headers: { Authorization: `Bearer ${UPSTASH_REDIS_REST_TOKEN}` },
     });
     const data = await res.json();
+    // Only send mapped comments to frontend
     return {
       statusCode: 200,
-      body: JSON.stringify({ count: parseInt(data.result) || 0, comments })
+      body: JSON.stringify({ count: parseInt(data.result) || 0, comments: comments.map(mapComment) })
     };
   }
 
@@ -50,8 +61,6 @@ exports.handler = async (event) => {
         id: uuidv4(),
         text: body.comment,
         ip,
-        likes: [],
-        dislikes: [],
         created: Date.now()
       };
       comments.unshift(newComment);
@@ -60,17 +69,17 @@ exports.handler = async (event) => {
       return { statusCode: 200, body: JSON.stringify({ ok: true }) };
     }
     // Edit comment
-    if (body.edit && body.id) {
+    if (body.id && body.text) {
       const idx = comments.findIndex(c => c.id === body.id && c.ip === ip);
       if (idx !== -1) {
-        comments[idx].text = body.edit;
+        comments[idx].text = body.text;
         await setComments(comments);
         return { statusCode: 200, body: JSON.stringify({ ok: true }) };
       }
       return { statusCode: 403, body: 'Not allowed' };
     }
     // Delete comment
-    if (body.delete && body.id) {
+    if (body.id && body.text === undefined) {
       const idx = comments.findIndex(c => c.id === body.id && c.ip === ip);
       if (idx !== -1) {
         comments.splice(idx, 1);
@@ -79,49 +88,6 @@ exports.handler = async (event) => {
       }
       return { statusCode: 403, body: 'Not allowed' };
     }
-    // Like/dislike comment
-    if ((body.like || body.dislike) && body.id) {
-      const idx = comments.findIndex(c => c.id === body.id);
-      if (idx !== -1) {
-        if (body.like) {
-          if (!comments[idx].likes.includes(ip)) comments[idx].likes.push(ip);
-          comments[idx].dislikes = comments[idx].dislikes.filter(x => x !== ip);
-        }
-        if (body.dislike) {
-          if (!comments[idx].dislikes.includes(ip)) comments[idx].dislikes.push(ip);
-          comments[idx].likes = comments[idx].likes.filter(x => x !== ip);
-        }
-        await setComments(comments);
-        return { statusCode: 200, body: JSON.stringify({ ok: true }) };
-      }
-      return { statusCode: 404, body: 'Not found' };
-    }
-    // Like logic (same as before)
-    const checkRes = await fetch(`${UPSTASH_REDIS_REST_URL}/sismember/${USERS_KEY}/${ip}`, {
-      headers: { Authorization: `Bearer ${UPSTASH_REDIS_REST_TOKEN}` },
-    });
-    const checkData = await checkRes.json();
-    if (checkData.result === 1) {
-      const countRes = await fetch(`${UPSTASH_REDIS_REST_URL}/get/${COUNT_KEY}`, {
-        headers: { Authorization: `Bearer ${UPSTASH_REDIS_REST_TOKEN}` },
-      });
-      const countData = await countRes.json();
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ count: parseInt(countData.result) || 0, liked: true })
-      };
-    }
-    await fetch(`${UPSTASH_REDIS_REST_URL}/sadd/${USERS_KEY}/${ip}`, {
-      headers: { Authorization: `Bearer ${UPSTASH_REDIS_REST_TOKEN}` },
-    });
-    const incRes = await fetch(`${UPSTASH_REDIS_REST_URL}/incr/${COUNT_KEY}`, {
-      headers: { Authorization: `Bearer ${UPSTASH_REDIS_REST_TOKEN}` },
-    });
-    const incData = await incRes.json();
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ count: parseInt(incData.result), liked: true })
-    };
   }
 
   return { statusCode: 405, body: 'Method Not Allowed' };

@@ -227,11 +227,11 @@
                 <!-- Comment Section Start -->
                 <div class="comment-section" style="margin-top:32px;">
                     <h3 style="margin-bottom:12px;">Comments</h3>
-                    <div id="commentsList" style="margin-bottom:16px; max-height:500px; overflow-y:auto; background:#181818; border-radius:8px; padding:8px 0;"></div>
-                    <form id="commentForm" style="display:flex;gap:8px;">
+                    <form id="commentForm" style="display:flex;gap:8px;margin-bottom:12px;">
                         <input type="text" id="commentInput" placeholder="Add a comment..." style="flex:1;padding:8px;border-radius:6px;border:1px solid #333;background:#222;color:#fff;">
                         <button type="submit" style="background:#0095f6;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:600;">Post</button>
                     </form>
+                    <div id="commentsList" style="max-height:500px;overflow-y:auto;background:#181818;border-radius:12px;padding:12px 0;box-shadow:0 2px 12px #0008;scrollbar-width:none;"></div>
                 </div>
                 <!-- Comment Section End -->
             </div>
@@ -297,6 +297,8 @@ function loadComments() {
         `;
         commentsList.appendChild(div);
       });
+      // Scroll to bottom to show latest comment
+      commentsList.scrollTop = commentsList.scrollHeight;
     });
 }
 loadComments();

@@ -132,7 +132,7 @@
                 <div class="profile-stats">
                     <span><strong>0</strong> posts</span>
                     <span><strong>0</strong> followers</span>
-                    <span><strong>83</strong> following</span>
+                    <span><strong>0</strong> following</span>
                 </div>
                 <div class="profile-bio">
                     <span class="emoji">@</span>
@@ -196,15 +196,20 @@ function loadComments() {
       (data.comments || []).forEach(c => {
         const div = document.createElement('div');
         div.className = 'comment';
-        // c: { id, text, user, likes, dislikes, liked, disliked, isOwner }
+        // c: { id, text, user, date, isOwner }
+        const dateStr = c.date ? new Date(c.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
         div.innerHTML = `
           <span class="comment-text" data-id="${c.id}">${c.text}</span>
-          <div style="float:right;display:inline-flex;gap:8px;">
-            <button class="like-comment-btn" data-id="${c.id}" ${c.liked ? 'disabled' : ''} title="Like" style="background:none;border:none;color:#0af;cursor:pointer;">👍 <span>${c.likes||0}</span></button>
-            <button class="dislike-comment-btn" data-id="${c.id}" ${c.disliked ? 'disabled' : ''} title="Dislike" style="background:none;border:none;color:#fa0;cursor:pointer;">👎 <span>${c.dislikes||0}</span></button>
-            ${c.isOwner ? `<button class="edit-comment-btn" data-id="${c.id}" style="background:none;border:none;color:#0f0;cursor:pointer;">✏️</button>
-            <button class="delete-comment-btn" data-id="${c.id}" style="background:none;border:none;color:#f00;cursor:pointer;">🗑️</button>` : ''}
-          </div>
+          <span style="color:#888;font-size:0.9em;margin-left:8px;">${dateStr}</span>
+          ${c.isOwner ? `
+            <span class="comment-menu" style="float:right;position:relative;">
+              <button class="menu-btn" data-id="${c.id}" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.2em;">⋯</button>
+              <div class="menu-dropdown" style="display:none;position:absolute;right:0;top:24px;background:#222;border-radius:6px;box-shadow:0 2px 8px #0006;z-index:10;">
+                <button class="edit-comment-btn" data-id="${c.id}" style="display:block;width:100%;background:none;border:none;color:#0f0;padding:8px 16px;cursor:pointer;text-align:left;">Edit</button>
+                <button class="delete-comment-btn" data-id="${c.id}" style="display:block;width:100%;background:none;border:none;color:#f00;padding:8px 16px;cursor:pointer;text-align:left;">Remove</button>
+              </div>
+            </span>
+          ` : ''}
         `;
         commentsList.appendChild(div);
       });
@@ -228,12 +233,21 @@ commentForm.addEventListener('submit', e => {
     });
 });
 
-// Comment actions (edit, delete, like, dislike)
+// Comment actions (edit, delete, menu)
 commentsList.addEventListener('click', function(e) {
   const id = e.target.dataset.id;
-  if (e.target.classList.contains('edit-comment-btn')) {
+  if (e.target.classList && e.target.classList.contains('menu-btn')) {
+    // Toggle menu dropdown
+    const menu = e.target.closest('.comment-menu').querySelector('.menu-dropdown');
+    document.querySelectorAll('.menu-dropdown').forEach(m => { if (m !== menu) m.style.display = 'none'; });
+    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+    e.stopPropagation();
+    return;
+  }
+  if (e.target.classList && e.target.classList.contains('edit-comment-btn')) {
     // Edit comment
-    const textSpan = e.target.closest('.comment').querySelector('.comment-text');
+    const commentDiv = e.target.closest('.comment');
+    const textSpan = commentDiv.querySelector('.comment-text');
     const oldText = textSpan.textContent;
     const input = document.createElement('input');
     input.type = 'text';
@@ -256,9 +270,11 @@ commentsList.addEventListener('click', function(e) {
         .then(res => res.json())
         .then(() => loadComments());
     };
+    // Hide menu
+    e.target.closest('.menu-dropdown').style.display = 'none';
   }
-  if (e.target.classList.contains('delete-comment-btn')) {
-    if (!confirm('Delete this comment?')) return;
+  if (e.target.classList && e.target.classList.contains('delete-comment-btn')) {
+    if (!confirm('Remove this comment?')) return;
     fetch('/.netlify/functions/like', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -266,25 +282,13 @@ commentsList.addEventListener('click', function(e) {
     })
       .then(res => res.json())
       .then(() => loadComments());
+    // Hide menu
+    e.target.closest('.menu-dropdown').style.display = 'none';
   }
-  if (e.target.classList.contains('like-comment-btn')) {
-    fetch('/.netlify/functions/like', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ likeComment: id })
-    })
-      .then(res => res.json())
-      .then(() => loadComments());
-  }
-  if (e.target.classList.contains('dislike-comment-btn')) {
-    fetch('/.netlify/functions/like', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dislikeComment: id })
-    })
-      .then(res => res.json())
-      .then(() => loadComments());
-  }
+});
+// Hide menu on outside click
+window.addEventListener('click', () => {
+  document.querySelectorAll('.menu-dropdown').forEach(m => m.style.display = 'none');
 });
     </script>
 </body>

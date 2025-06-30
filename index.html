@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Profile - tushar.ix</title>
+    <style>
+        body {
+            background: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+        }
+        .profile-container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: #111;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.7);
+            padding: 32px 24px 24px 24px;
+        }
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+        .profile-pic {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #222;
+            background: #222;
+        }
+        .profile-info {
+            flex: 1;
+        }
+        .profile-username {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .like-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            outline: none;
+            padding: 0;
+            margin-left: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .like-btn svg {
+            fill: #ff0000;
+            width: 36px;
+            height: 36px;
+            transition: transform 0.2s;
+        }
+        .like-btn.liked svg {
+            fill: #e25555;
+        }
+        .like-btn:hover svg {
+            transform: scale(1.1);
+        }
+        .like-count {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-left: 4px;
+        }
+        .profile-stats {
+            display: flex;
+            gap: 32px;
+            margin-bottom: 12px;
+        }
+        .profile-stats span {
+            font-size: 1.1rem;
+        }
+        .profile-bio {
+            margin-bottom: 8px;
+        }
+        .profile-bio strong {
+            color: #fff;
+        }
+        .profile-bio .emoji {
+            font-size: 1.1em;
+        }
+        .profile-followed {
+            color: #aaa;
+            font-size: 0.95rem;
+            margin-top: 8px;
+        }
+        @media (max-width: 700px) {
+            .profile-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+            .profile-pic {
+                width: 120px;
+                height: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="profile-container">
+        <div class="profile-header">
+            <img class="profile-pic" src="pic.png" alt="Profile picture">
+            <div class="profile-info">
+                <div class="profile-username">tushar.ix 
+                    <button class="like-btn" id="likeBtn" aria-label="Like">
+                        <svg viewBox="0 0 24 24" width="24" height="24">
+                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41 0.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                        </svg>
+                    </button>
+                    <span class="like-count" id="likeCount">0</span>
+                </div>
+                <div class="profile-stats">
+                    <span><strong>0</strong> posts</span>
+                    <span><strong>0</strong> followers</span>
+                    <span><strong>83</strong> following</span>
+                </div>
+                <div class="profile-bio">
+                    <span class="emoji">@</span>
+                </div>
+                <div class="profile-followed">
+                    Followed by <strong>tushar.io</strong> and <strong>babu_4</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+const likeBtn = document.getElementById('likeBtn');
+const likeCount = document.getElementById('likeCount');
+let liked = false;
+
+// Fetch current like count on page load
+fetch('/.netlify/functions/like')
+  .then(res => res.json())
+  .then(data => {
+    likeCount.textContent = data.count;
+    if (data.liked) {
+      liked = true;
+      likeBtn.classList.add('liked');
+      likeBtn.disabled = true;
+    }
+  });
+
+likeBtn.addEventListener('click', () => {
+  if (liked) return;
+  fetch('/.netlify/functions/like', { method: 'POST' })
+    .then(res => res.json())
+    .then(data => {
+      likeCount.textContent = data.count;
+      liked = true;
+      likeBtn.classList.add('liked');
+      likeBtn.disabled = true;
+    });
+});
+    </script>
+</body>
+</html>

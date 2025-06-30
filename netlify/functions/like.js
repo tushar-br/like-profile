@@ -69,24 +69,24 @@ exports.handler = async (event) => {
       return { statusCode: 200, body: JSON.stringify({ ok: true }) };
     }
     // Edit comment
-    if (body.id && body.text) {
+    if (body.id && typeof body.text === 'string') {
       const idx = comments.findIndex(c => c.id === body.id && c.ip === ip);
       if (idx !== -1) {
         comments[idx].text = body.text;
         await setComments(comments);
         return { statusCode: 200, body: JSON.stringify({ ok: true }) };
       }
-      return { statusCode: 403, body: 'Not allowed' };
+      return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'Not allowed' }) };
     }
     // Delete comment
-    if (body.id && body.text === undefined) {
+    if (body.id && body.delete === true) {
       const idx = comments.findIndex(c => c.id === body.id && c.ip === ip);
       if (idx !== -1) {
         comments.splice(idx, 1);
         await setComments(comments);
         return { statusCode: 200, body: JSON.stringify({ ok: true }) };
       }
-      return { statusCode: 403, body: 'Not allowed' };
+      return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'Not allowed' }) };
     }
   }
 

@@ -195,11 +195,17 @@ function loadComments() {
       commentsList.innerHTML = '';
       (data.comments || []).forEach(c => {
         const div = document.createElement('div');
-        div.textContent = c;
-        div.style.marginBottom = '6px';
-        div.style.background = '#181818';
-        div.style.padding = '8px 12px';
-        div.style.borderRadius = '6px';
+        div.className = 'comment';
+        // c: { id, text, user, likes, dislikes, liked, disliked, isOwner }
+        div.innerHTML = `
+          <span class="comment-text" data-id="${c.id}">${c.text}</span>
+          <div style="float:right;display:inline-flex;gap:8px;">
+            <button class="like-comment-btn" data-id="${c.id}" ${c.liked ? 'disabled' : ''} title="Like" style="background:none;border:none;color:#0af;cursor:pointer;">👍 <span>${c.likes||0}</span></button>
+            <button class="dislike-comment-btn" data-id="${c.id}" ${c.disliked ? 'disabled' : ''} title="Dislike" style="background:none;border:none;color:#fa0;cursor:pointer;">👎 <span>${c.dislikes||0}</span></button>
+            ${c.isOwner ? `<button class="edit-comment-btn" data-id="${c.id}" style="background:none;border:none;color:#0f0;cursor:pointer;">✏️</button>
+            <button class="delete-comment-btn" data-id="${c.id}" style="background:none;border:none;color:#f00;cursor:pointer;">🗑️</button>` : ''}
+          </div>
+        `;
         commentsList.appendChild(div);
       });
     });
@@ -220,6 +226,65 @@ commentForm.addEventListener('submit', e => {
       commentInput.value = '';
       loadComments();
     });
+});
+
+// Comment actions (edit, delete, like, dislike)
+commentsList.addEventListener('click', function(e) {
+  const id = e.target.dataset.id;
+  if (e.target.classList.contains('edit-comment-btn')) {
+    // Edit comment
+    const textSpan = e.target.closest('.comment').querySelector('.comment-text');
+    const oldText = textSpan.textContent;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = oldText;
+    input.style.width = '70%';
+    textSpan.replaceWith(input);
+    input.focus();
+    input.onblur = input.onkeydown = function(ev) {
+      if (ev.type === 'keydown' && ev.key !== 'Enter') return;
+      const newText = input.value.trim();
+      if (!newText || newText === oldText) {
+        input.replaceWith(textSpan);
+        return;
+      }
+      fetch('/.netlify/functions/like', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, text: newText })
+      })
+        .then(res => res.json())
+        .then(() => loadComments());
+    };
+  }
+  if (e.target.classList.contains('delete-comment-btn')) {
+    if (!confirm('Delete this comment?')) return;
+    fetch('/.netlify/functions/like', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    })
+      .then(res => res.json())
+      .then(() => loadComments());
+  }
+  if (e.target.classList.contains('like-comment-btn')) {
+    fetch('/.netlify/functions/like', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ likeComment: id })
+    })
+      .then(res => res.json())
+      .then(() => loadComments());
+  }
+  if (e.target.classList.contains('dislike-comment-btn')) {
+    fetch('/.netlify/functions/like', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dislikeComment: id })
+    })
+      .then(res => res.json())
+      .then(() => loadComments());
+  }
 });
     </script>
 </body>
